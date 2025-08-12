@@ -1,0 +1,96 @@
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from xgboost import XGBClassifier
+from sklearn.metrics import classification_report, accuracy_score
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Your dataset
+data = {
+    'OrderID': list(range(1, 11)),
+    'Load_ton': [2, 5, 10, 3, 8, 12, 4, 6, 9, 7],
+    'DeliveryUrgency': ['Standard', 'Express', 'Standard', 'Express', 'Standard', 'Express', 'Standard', 'Express', 'Standard', 'Express'],
+    'TruckType': ['Mini Truck', 'Medium Truck', 'Heavy Truck', 'Mini Truck', 'Medium Truck', 'Heavy Truck', 'Mini Truck', 'Medium Truck', 'Heavy Truck', 'Medium Truck'],
+    'CustomerType': ['Regular', 'Priority', 'Business', 'Priority', 'Business', 'Regular', 'Business', 'Priority', 'Regular', 'Business'],
+    'BasePrice': [5000]*10
+}
+
+df = pd.DataFrame(data)
+
+truck_multipliers = {
+    'Mini Truck': 1.0,
+    'Medium Truck': 1.3,
+    'Heavy Truck': 1.6
+}
+
+def calculate_dynamic_price(row, peak_multiplier=1.15):
+    base = row['BasePrice']
+    load_charge = 800 * row['Load_ton']
+    truck_mult = truck_multipliers[row['TruckType']]
+    
+    price = (base + load_charge) * truck_mult
+    
+    # Delivery urgency surcharge
+    if row['DeliveryUrgency'] == 'Express':
+        price *= 1.25  # 25% surcharge
+    
+    # Customer type adjustments
+    if row['CustomerType'] == 'Priority':
+        price *= 1.10  # 10% surcharge
+    elif row['CustomerType'] == 'Business':
+        price *= 0.95  # 5% discount
+    
+    # Peak demand multiplier
+    price *= peak_multiplier
+    
+    return round(price, 2)
+
+df['DynamicPrice'] = df.apply(calculate_dynamic_price, axis=1)
+
+print("Dynamic Pricing Output:")
+print(df[['OrderID', 'Load_ton', 'DeliveryUrgency', 'TruckType', 'CustomerType', 'DynamicPrice']])
+
+# Create binary target: High price = 1, Low price = 0 (median split)
+threshold = df['DynamicPrice'].median()
+df['HighPrice'] = np.where(df['DynamicPrice'] > threshold, 1, 0)
+
+# Features for classification
+features = ['Load_ton', 'DeliveryUrgency', 'TruckType', 'CustomerType']
+
+# Encode categorical features
+for col in ['DeliveryUrgency', 'TruckType', 'CustomerType']:
+    le = LabelEncoder()
+    df[col] = le.fit_transform(df[col])
+
+X = df[features]
+y = df['HighPrice']
+
+# Train/test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train XGBoost classifier
+model = XGBClassifier(use_label_encoder=False, eval_metric='logloss', random_state=42)
+model.fit(X_train, y_train)
+
+# Predict & evaluate
+y_pred = model.predict(X_test)
+
+print("\nAccuracy:", accuracy_score(y_test, y_pred))
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+
+# Feature importance
+importance = model.feature_importances_
+importance_df = pd.DataFrame({'Feature': features, 'Importance': importance}).sort_values(by='Importance', ascending=False)
+
+print("\nFeature Importances:")
+print(importance_df)
+
+# Plot feature importance
+plt.figure(figsize=(8,5))
+sns.barplot(x='Importance', y='Feature', data=importance_df)
+plt.title('XGBoost Feature Importance')
+plt.tight_layout()
+plt.show()
