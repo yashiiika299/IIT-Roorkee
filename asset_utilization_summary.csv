@@ -1,0 +1,11 @@
+OrderID,Load_ton,DeliveryUrgency,TruckType,CustomerType,BasePrice,DynamicPrice
+1,2,Standard,Mini Truck,Regular,5000,7590.0
+2,5,Express,Medium Truck,Priority,5000,18500.62
+3,10,Standard,Heavy Truck,Business,5000,22724.0
+4,3,Express,Mini Truck,Priority,5000,11701.25
+5,8,Standard,Medium Truck,Business,5000,16190.85
+6,12,Express,Heavy Truck,Regular,5000,33580.0
+7,4,Standard,Mini Truck,Business,5000,8958.5
+8,6,Express,Medium Truck,Priority,5000,20145.12
+9,9,Standard,Heavy Truck,Regular,5000,22448.0
+10,7,Express,Medium Truck,Business,5000,18818.31
